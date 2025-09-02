@@ -121,7 +121,7 @@ options:
 | Mother tongue effect (MTE) | MTE expresses the impact of asking questions in a language in which the requested information is locally salient, compared to asking it in English. A positive MTE indicates information is more readily available in the language it was (likely) present in the training data, whereas a negative mother tongue effect indicates the information is more easily accessible in English. |
 |Locality effect (LE) | LE quantifies the effect of using locally sourced vs translated data. It is measured by computing the difference between scores for locally sourced data and translated English-sourced data. A positive LE implies that using translated English data underestimates performance on a language, a negative LE that using translated English data overestimates performance. |
 
-### For developers
+## For developers
 Spotted an error in the data? Inconsistency? Please, feel free to submit a PR. Don't forget to compress the data back:
 ```bash
 tar -cJ --no-xattrs benchmark_data | openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -out benchmark_data.tar.xz.enc

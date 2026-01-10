@@ -235,7 +235,7 @@ def evaluate_all(reference_answers, our_answers):
         ref_current = reference_answers[lang]
         for id, prediction in examples.items():
             results[lang][id] = {}
-            targets = ref_current[id]
+            targets = [t.lower() for t in ref_current[id]]
             for metric_name, metric in metrics.items():
                 results[lang][id][metric_name] = metric(prediction, targets)
             results[lang][id]["targets"] = targets

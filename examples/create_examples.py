@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 import json
 import os
 import pathlib
+import sys
 from typing import List
 from prompts import *
 from utils import jinja_format
@@ -45,7 +46,7 @@ if __name__ == "__main__":
 
     # Load all files
     if not BENCHMARK_DATA.exists():
-        print(f"{BENCHMARK_DATA} not found. Please follow the README instructions and extract the archive.")
+        sys.exit(f"{BENCHMARK_DATA} not found. Please follow the README instructions and extract the archive.")
     else:
         all_examples = {}
         all_examples_translated_machine_english = {}

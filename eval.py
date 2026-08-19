@@ -297,7 +297,7 @@ def main() -> None:
         if not os.path.isdir(os.path.join(args.dataset_location, lang)):
             continue
         path = os.path.join(args.dataset_location, lang, f"{args.subset}.jsonl")
-        if not path:
+        if not os.path.exists(path):
             continue
         input_parse_tuples.append((path, lang))
         # get translated paths

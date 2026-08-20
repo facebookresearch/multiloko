@@ -22,7 +22,7 @@ FA_TOKENS = {
     "farsi": ("سؤال:", "جواب:"),
     "german": ("F:", "A:"),
     "japanese": ("質問：", "回答："),
-    "khmer": ("សំណួរ៖c", "ចម្លើយ៖"),
+    "khmer": ("សំណួរ៖", "ចម្លើយ៖"),
     "korean": ("질문:", "답:"),
     "malay": ("Soalan:", "Jawapan:"),
     "marathi": ("प्रश्न:", "उत्तर:"),
@@ -50,29 +50,29 @@ fewshot = {
             الإجابة: {{ x["answer"] }}
 
             {% endfor -%}
-            يرجى الإجابة عن السؤال التالي بإيجاز قدر الإمكان. يجب أن تكون الإجابة في شكلc {{ output_type }}.
+            يرجى الإجابة عن السؤال التالي بإيجاز قدر الإمكان. يجب أن تكون الإجابة في شكل {{ output_type }}.
             السؤال: {{ question }}
             الإجابة:"""
     ),
     "bengali": textwrap.dedent(
         """
             {% for x in few_shot -%}
-            প্র: {{ x["question"] }} শুধু একটিc{{ x["output_type"] }}দাও
+            প্র: {{ x["question"] }} শুধু একটি{{ x["output_type"] }}দাও
             উ: {{ x["answer"] }}
             {% endfor -%}
 
-            প্র: {{ question }} শুধু একটিc{{ output_type }}দাও
+            প্র: {{ question }} শুধু একটি{{ output_type }}দাও
             উ:"""
     ),
     "cantonese": textwrap.dedent(
         """
-            {% for x in few_shot -%}c
+            {% for x in few_shot -%}
             問題：{{ x["question"] }}只係產生一個{{ x["output_type"] }}就得。同埋要用廣東話口語回答。
             答案：{{ x["answer"] }}
 
             {% endfor -%}
 
-            问题：{{ question }}只係產生一個{{ output_type }}就得。同埋要用廣東話口語回答。
+            問題：{{ question }}只係產生一個{{ output_type }}就得。同埋要用廣東話口語回答。
             答案："""
     ),
     "czech": textwrap.dedent(
@@ -185,7 +185,7 @@ fewshot = {
         """\
             {% for x in few_shot -%}
             Rispondi alla seguente domanda in modo chiaro e conciso.
-            D: {{ x["question"] }} Produci solo risposte del seguente tipo: {{ output_type }}.
+            D: {{ x["question"] }} Produci solo risposte del seguente tipo: {{ x["output_type"] }}.
             R: {{ x["answer"] }}
 
             {% endfor -%}
@@ -196,7 +196,7 @@ fewshot = {
     "japanese": textwrap.dedent(
         """\
             {% for x in few_shot -%}
-            質問：{{ x["question"] }}{{ x["output_type"] }}だけを答えてください.
+            質問：{{ x["question"] }}{{ x["output_type"] }}だけを答えてください。
             回答：{{ x["answer"] }}
 
             {% endfor -%}
@@ -224,7 +224,7 @@ fewshot = {
 
             {% endfor -%}
 
-            질문: {{ question }}{{ output_type }}(으)로 간단히 대답해줘。
+            질문: {{ question }}{{ output_type }}(으)로 간단히 대답해줘.
             답:"""
     ),
     "malay": textwrap.dedent(
@@ -309,7 +309,7 @@ fewshot = {
     "spanish": textwrap.dedent(
         """\
             {% for x in few_shot -%}
-            Pregunta: {{ x["question"] }} La respuesta debe ser del siguiente tipo: {{ output_type }}.
+            Pregunta: {{ x["question"] }} La respuesta debe ser del siguiente tipo: {{ x["output_type"] }}.
             Respuesta: {{ x["answer"] }}
 
             {% endfor -%}
@@ -361,7 +361,7 @@ fewshot = {
 
             {% endfor -%}
 
-            問題：{{ question }} 只產生一個d{{ output_type }}即可。
+            問題：{{ question }} 只產生一個{{ output_type }}即可。
             答案："""
     ),
     "turkish": textwrap.dedent(
@@ -639,7 +639,7 @@ chat = {
     "bengali": textwrap.dedent(
         """\
             প্রতিটি প্রশ্ন এককথায় উত্তর দাও
-            {{ question }} প্রশ্নের উত্তরে শুধু {{ output_type }}cদাও
+            {{ question }} প্রশ্নের উত্তরে শুধু {{ output_type }}দাও
             """
     ),
     "cantonese": textwrap.dedent(

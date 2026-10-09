@@ -109,6 +109,27 @@ PREFIX_ARTICLES = {
 # corrupt numeric answers.
 
 
+####### Answer frames per language #######
+# Two chat prompts in prompts.py instruct the model to wrap its answer in a
+# sentence: english ('end with "The answer is [answer]"') and urdu, which is a
+# literal translation of it ('"جواب [جواب] ہے" پر ختم ہونا چاہیے'). Both elicit
+# the frame reliably, and _extract_answer exists to remove it.
+#
+# English is handled there by splitting on " answer is ", which works because
+# the frame is a prefix. Urdu's is a circumfix -- جواب X ہے -- so the trailing
+# ہے survives the split and stays in every prediction, making exact match 0.0
+# for the language regardless of what the model answered.
+#
+# Listed as (prefix, suffix). Both are compared against the canonical form, so
+# they are lowercased and punctuation-free.
+#
+# Dutch is deliberately absent: its prompt only *ends* with "Het antwoord is"
+# and never instructs the format, so models answer directly.
+ANSWER_FRAMES = {
+    "urdu": ("جواب", "ہے"),
+}
+
+
 def remove_articles(text: str, language: str = "english") -> str:
     """Drops the language's articles, leaving whitespace tidy."""
     if language in PREFIX_ARTICLES:
@@ -171,9 +192,29 @@ def _extract_answer(text: str) -> str:
     return text
 
 
+def _strip_answer_frame(text: str, language: str = "english") -> str:
+    """Removes the sentence frame the prompt asks the model to produce.
+
+    _extract_answer covers English, whose frame is a prefix. A language whose
+    frame surrounds the answer needs both ends removed; see ANSWER_FRAMES.
+
+    Returns the input unchanged when there is nothing to strip, so callers can
+    test for a difference, and never returns "" -- a blank variant would make
+    `contains` score 1.0 against every prediction.
+    """
+    prefix, suffix = ANSWER_FRAMES.get(language, ("", ""))
+    stripped = text
+    if prefix and stripped.startswith(prefix + " "):
+        stripped = stripped[len(prefix) + 1 :]
+    if suffix and stripped.endswith(" " + suffix):
+        stripped = stripped[: -len(suffix) - 1]
+    return white_space_fix(stripped) or text
+
+
 def answer_variants(text: str, language: str = "english") -> List[str]:
     """
-    The forms an answer may take: as written, and without its articles.
+    The forms an answer may take: as written, without its articles, and --
+    for languages whose prompt asks for one -- without its answer frame.
 
     Scoring matches any variant against any other, so article removal only ever
     adds a way to match. A wrong article list cannot delete the form that would
@@ -186,6 +227,9 @@ def answer_variants(text: str, language: str = "english") -> List[str]:
     """
     answer = _extract_answer(_canonical_form(text))
     variants = [answer, remove_articles(answer, language)]
+    unframed = _strip_answer_frame(answer, language)
+    if unframed != answer:
+        variants += [unframed, remove_articles(unframed, language)]
     return list(dict.fromkeys(variant for variant in variants if variant))
 
 

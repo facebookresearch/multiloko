@@ -11,6 +11,7 @@ import unittest
 
 from eval import (
     ARTICLES,
+    ANSWER_FRAMES,
     FA_TOKENS,
     contains,
     exact_match,
@@ -24,6 +25,7 @@ from eval import (
     parse_output_jsonl,
     postprocess_answers,
     remove_articles,
+    _strip_answer_frame,
 )
 
 BENCHMARK_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_data")
@@ -521,6 +523,108 @@ class TestAnswerVariants(unittest.TestCase):
             set(answer_variants("ein Kind", "german"))
             & set(answer_variants("Kind", "german"))
         )
+
+
+class TestAnswerFrames(unittest.TestCase):
+    """
+    Two prompts in prompts.py tell the model to wrap its answer in a sentence:
+    english ('end with "The answer is [answer]"') and urdu, which is a literal
+    translation of it. _extract_answer removes the english frame by splitting
+    on " answer is ", which works because that frame is a prefix. Urdu frames
+    the answer on both sides, so the trailing ہے has to come off as well.
+
+    Unframing is additive, like article handling: the framed form is kept, so
+    a wrong frame rule can only fail to add a match, never delete one.
+    """
+
+    def test_urdu_frame_is_removed(self):
+        # Real model output. With the frame left in, every urdu prediction
+        # differed from its target and exact match was 0.0 for the language.
+        self.assertEqual(answer_variants("جواب غزل ہے", "urdu"), ["جواب غزل ہے", "غزل"])
+
+    def test_framed_prediction_matches_a_bare_gold_answer(self):
+        for prediction, gold in (
+            ("جواب غزل ہے", "غزل"),
+            ("جواب صدر ہے", "صدر"),
+            ("جواب سنسکرت ہے", "سنسکرت"),
+            ("جواب انگریزی ہے", "انگریزی"),
+        ):
+            with self.subTest(prediction=prediction):
+                self.assertTrue(
+                    set(answer_variants(prediction, "urdu"))
+                    & set(answer_variants(gold, "urdu"))
+                )
+
+    def test_unframing_does_not_invent_a_match(self):
+        # حالی is not راشد: removing the frame must expose the answer, not
+        # excuse a wrong one.
+        self.assertFalse(
+            set(answer_variants("جواب حالی ہے", "urdu"))
+            & set(answer_variants("ن م راشد", "urdu"))
+        )
+
+    def test_the_framed_form_as_written_is_kept(self):
+        self.assertEqual(
+            answer_variants("جواب غزل ہے", "urdu")[0], _canonical_form("جواب غزل ہے")
+        )
+
+    def test_a_frame_shaped_answer_is_not_emptied(self):
+        # The frame words are ordinary words. An answer consisting only of
+        # them must survive, for the same reason "un" survives in french.
+        for text in ("جواب", "ہے", "جواب ہے"):
+            with self.subTest(text=text):
+                self.assertNotIn("", answer_variants(text, "urdu"))
+                self.assertNotEqual(answer_variants(text, "urdu"), [])
+
+    def test_languages_without_a_frame_are_untouched(self):
+        # Dutch is deliberately absent: its prompt merely ends with "Het
+        # antwoord is" and never instructs the format, so models answer
+        # directly and it already scores normally.
+        self.assertNotIn("dutch", ANSWER_FRAMES)
+        self.assertEqual(
+            answer_variants("Het antwoord is Amsterdam", "dutch"),
+            ["het antwoord is amsterdam", "antwoord is amsterdam"],
+        )
+
+    def test_the_english_and_japanese_paths_are_unchanged(self):
+        # _extract_answer already handles these; ANSWER_FRAMES must not
+        # disturb them.
+        self.assertEqual(answer_variants("The answer is Paris", "english"), ["paris"])
+        self.assertEqual(answer_variants("東京です", "japanese"), ["東京"])
+
+    def test_stripping_is_a_no_op_for_unlisted_languages(self):
+        for language in ("english", "arabic", "french", "bengali", "klingon"):
+            with self.subTest(language=language):
+                self.assertEqual(_strip_answer_frame("x y", language), "x y")
+
+    def test_frame_language_keys_are_real_languages(self):
+        # Same guard as the article lists: a typo would silently disable
+        # unframing rather than fail.
+        for language in ANSWER_FRAMES:
+            with self.subTest(language=language):
+                self.assertIn(language, FA_TOKENS)
+
+    def test_normalization_is_idempotent(self):
+        for text in ("جواب غزل ہے", "جواب", "غزل"):
+            with self.subTest(text=text):
+                once = normalize_answer(text, "urdu")
+                self.assertEqual(normalize_answer(once, "urdu"), once)
+
+    @unittest.skipUnless(HAS_DATA, "benchmark_data not extracted")
+    def test_no_gold_target_is_emptied_by_unframing(self):
+        import json
+
+        for language in sorted(os.listdir(BENCHMARK_DATA)):
+            path = os.path.join(BENCHMARK_DATA, language, "dev.jsonl")
+            if not os.path.isfile(path):
+                continue
+            with open(path) as f:
+                for line in f:
+                    for target in json.loads(line)["targets"]:
+                        if not target.strip():
+                            continue
+                        with self.subTest(language=language, target=target):
+                            self.assertNotIn("", answer_variants(target, language))
 
 
 if __name__ == "__main__":

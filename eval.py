@@ -130,6 +130,23 @@ ANSWER_FRAMES = {
 }
 
 
+####### Zero-width non-joiner #######
+# U+200C marks a boundary between characters that would otherwise join. Its
+# Unicode category is Cf, so remove_punc leaves it in place -- that strips
+# categories beginning "P". A prediction and a target that differ only in
+# whether the boundary was typed as a ZWNJ, a space, or nothing then cannot
+# match, though they are the same answer.
+#
+# This is not hypothetical: in the dev split the gold targets contain a ZWNJ in
+# 18 farsi, 2 bengali and 2 marathi answers, e.g. 'صادق قطب\u200cزاده'.
+#
+# Which plain rendering is right depends on the script, so both are produced
+# rather than picking one. In Perso-Arabic a space is usually correct
+# ('قطب\u200cزاده' -> 'قطب زاده'); in Indic scripts removal is
+# ('সর্দা\u200cর' -> 'সর্দার', where a space would split the word).
+ZWNJ = "\u200c"
+
+
 def remove_articles(text: str, language: str = "english") -> str:
     """Drops the language's articles, leaving whitespace tidy."""
     if language in PREFIX_ARTICLES:
@@ -211,6 +228,20 @@ def _strip_answer_frame(text: str, language: str = "english") -> str:
     return white_space_fix(stripped) or text
 
 
+def _zwnj_renderings(text: str) -> List[str]:
+    """The plain spellings of a word broken by a zero-width non-joiner.
+
+    Returns [] when there is no ZWNJ, so this only ever adds variants for the
+    answers that actually contain one. See ZWNJ.
+    """
+    if ZWNJ not in text:
+        return []
+    return [
+        white_space_fix(text.replace(ZWNJ, " ")),
+        white_space_fix(text.replace(ZWNJ, "")),
+    ]
+
+
 def answer_variants(text: str, language: str = "english") -> List[str]:
     """
     The forms an answer may take: as written, without its articles, and --
@@ -230,6 +261,7 @@ def answer_variants(text: str, language: str = "english") -> List[str]:
     unframed = _strip_answer_frame(answer, language)
     if unframed != answer:
         variants += [unframed, remove_articles(unframed, language)]
+    variants += [r for v in list(variants) for r in _zwnj_renderings(v)]
     return list(dict.fromkeys(variant for variant in variants if variant))
 
 

@@ -26,6 +26,8 @@ from eval import (
     postprocess_answers,
     remove_articles,
     _strip_answer_frame,
+    _zwnj_renderings,
+    ZWNJ,
 )
 
 BENCHMARK_DATA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmark_data")
@@ -625,6 +627,101 @@ class TestAnswerFrames(unittest.TestCase):
                             continue
                         with self.subTest(language=language, target=target):
                             self.assertNotIn("", answer_variants(target, language))
+
+
+class TestZeroWidthNonJoiner(unittest.TestCase):
+    """
+    U+200C marks a boundary between characters that would otherwise join. Its
+    Unicode category is Cf, and remove_punc only strips categories beginning
+    "P", so it survives canonicalization. Answers that differ only in whether
+    that boundary was typed as a ZWNJ, a space, or nothing are the same
+    answer and must still match.
+
+    Which plain rendering is right depends on the script, so both are
+    produced rather than picking one.
+    """
+
+    def test_both_plain_renderings_are_offered(self):
+        variants = answer_variants("قطب\u200cزاده", "farsi")
+        self.assertIn("قطب زاده", variants)  # Perso-Arabic: usually a space
+        self.assertIn("قطبزاده", variants)  # Indic: usually nothing
+
+    def test_perso_arabic_gold_matches_a_spaced_prediction(self):
+        # 'صادق قطب‌زاده' is a real dev target.
+        gold = "صادق قطب\u200cزاده"
+        self.assertTrue(
+            set(answer_variants(gold, "farsi"))
+            & set(answer_variants(gold.replace(ZWNJ, " "), "farsi"))
+        )
+
+    def test_indic_gold_matches_a_joined_prediction(self):
+        # A space would split 'সর্দার' into two words, so removal is the
+        # rendering that matters here.
+        gold = "সর্দা\u200cর বল্লভভাই পটেল"
+        self.assertTrue(
+            set(answer_variants(gold, "bengali"))
+            & set(answer_variants(gold.replace(ZWNJ, ""), "bengali"))
+        )
+
+    def test_it_works_whichever_side_carries_the_joiner(self):
+        # postprocess_answers runs on predictions and references alike.
+        plain, joined = "بانگ درا", "بانگ\u200cدرا"
+        self.assertTrue(
+            set(answer_variants(plain, "urdu")) & set(answer_variants(joined, "urdu"))
+        )
+
+    def test_text_without_a_joiner_gains_no_variants(self):
+        self.assertEqual(_zwnj_renderings("plain text"), [])
+        self.assertEqual(answer_variants("Der Hund", "german"), ["der hund", "hund"])
+
+    def test_the_form_as_written_is_kept(self):
+        text = "قطب\u200cزاده"
+        self.assertEqual(answer_variants(text, "farsi")[0], _canonical_form(text))
+
+    def test_a_joiner_only_answer_is_not_emptied(self):
+        # Both renderings collapse to "", which must be dropped rather than
+        # poisoning `contains`.
+        for text in (ZWNJ, ZWNJ * 2, " " + ZWNJ + " "):
+            with self.subTest(text=text):
+                self.assertNotIn("", answer_variants(text, "farsi"))
+
+    def test_normalization_is_idempotent(self):
+        for language, text in (("farsi", "قطب\u200cزاده"), ("bengali", "সর্দা\u200cর")):
+            with self.subTest(language=language):
+                once = normalize_answer(text, language)
+                self.assertEqual(normalize_answer(once, language), once)
+
+    def test_it_combines_with_the_urdu_frame(self):
+        self.assertTrue(
+            set(answer_variants("جواب بانگ\u200cدرا ہے", "urdu"))
+            & set(answer_variants("بانگ درا", "urdu"))
+        )
+
+    @unittest.skipUnless(HAS_DATA, "benchmark_data not extracted")
+    def test_every_joined_gold_target_is_reachable_from_a_plain_spelling(self):
+        # The dataset-wide statement of the bug: a model that writes the
+        # plain spelling of a joined gold answer used to score zero on it.
+        import json
+
+        checked = 0
+        for language in sorted(os.listdir(BENCHMARK_DATA)):
+            path = os.path.join(BENCHMARK_DATA, language, "dev.jsonl")
+            if not os.path.isfile(path):
+                continue
+            with open(path) as f:
+                for line in f:
+                    for target in json.loads(line)["targets"]:
+                        if ZWNJ not in target:
+                            continue
+                        checked += 1
+                        gold = set(answer_variants(target, language))
+                        for rendering in (" ", ""):
+                            spelled = answer_variants(
+                                target.replace(ZWNJ, rendering), language
+                            )
+                            with self.subTest(language=language, target=target):
+                                self.assertTrue(gold & set(spelled))
+        self.assertGreater(checked, 0, "no ZWNJ targets found to check")
 
 
 if __name__ == "__main__":

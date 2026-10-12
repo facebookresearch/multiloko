@@ -578,16 +578,6 @@ class TestAnswerFrames(unittest.TestCase):
                 self.assertNotIn("", answer_variants(text, "urdu"))
                 self.assertNotEqual(answer_variants(text, "urdu"), [])
 
-    def test_languages_without_a_frame_are_untouched(self):
-        # Dutch is deliberately absent: its prompt merely ends with "Het
-        # antwoord is" and never instructs the format, so models answer
-        # directly and it already scores normally.
-        self.assertNotIn("dutch", ANSWER_FRAMES)
-        self.assertEqual(
-            answer_variants("Het antwoord is Amsterdam", "dutch"),
-            ["het antwoord is amsterdam", "antwoord is amsterdam"],
-        )
-
     def test_the_english_and_japanese_paths_are_unchanged(self):
         # _extract_answer already handles these; ANSWER_FRAMES must not
         # disturb them.
@@ -595,8 +585,9 @@ class TestAnswerFrames(unittest.TestCase):
         self.assertEqual(answer_variants("東京です", "japanese"), ["東京"])
 
     def test_stripping_is_a_no_op_for_unlisted_languages(self):
-        for language in ("english", "arabic", "french", "bengali", "klingon"):
+        for language in ("english", "dutch", "arabic", "french", "bengali", "klingon"):
             with self.subTest(language=language):
+                self.assertNotIn(language, ANSWER_FRAMES)
                 self.assertEqual(_strip_answer_frame("x y", language), "x y")
 
     def test_frame_language_keys_are_real_languages(self):

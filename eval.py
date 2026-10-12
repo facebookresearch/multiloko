@@ -110,21 +110,22 @@ PREFIX_ARTICLES = {
 
 
 ####### Answer frames per language #######
-# Two chat prompts in prompts.py instruct the model to wrap its answer in a
-# sentence: english ('end with "The answer is [answer]"') and urdu, which is a
-# literal translation of it ('"جواب [جواب] ہے" پر ختم ہونا چاہیے'). Both elicit
-# the frame reliably, and _extract_answer exists to remove it.
+# _extract_answer removes the "The answer is X" wrapper the english prompt
+# asks for, by splitting on " answer is " and keeping the tail. That only
+# reaches a wrapper that precedes the answer.
 #
-# English is handled there by splitting on " answer is ", which works because
-# the frame is a prefix. Urdu's is a circumfix -- جواب X ہے -- so the trailing
-# ہے survives the split and stays in every prediction, making exact match 0.0
-# for the language regardless of what the model answered.
+# The urdu prompt asks for the same wrapper, translated: '"جواب [جواب] ہے" پر
+# ختم ہونا چاہیے'. In urdu it surrounds the answer -- جواب X ہے -- so the
+# trailing ہے survives the split and stays in every prediction. Exact match is
+# then 0.0 for the language whatever the model answered.
 #
-# Listed as (prefix, suffix). Both are compared against the canonical form, so
-# they are lowercased and punctuation-free.
+# This table holds wrappers that have to come off both ends, as
+# (prefix, suffix), matched against the canonical form and so lowercased and
+# punctuation-free.
 #
-# Dutch is deliberately absent: its prompt only *ends* with "Het antwoord is"
-# and never instructs the format, so models answer directly.
+# A language belongs here only once its predictions are observed to keep a
+# wrapper _extract_answer cannot remove -- it is a record of what models
+# actually emit, not of how the prompts are worded.
 ANSWER_FRAMES = {
     "urdu": ("جواب", "ہے"),
 }

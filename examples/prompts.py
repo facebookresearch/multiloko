@@ -674,7 +674,7 @@ chat = {
     "farsi": textwrap.dedent(
         """\
             به این سؤال تا حد امکان دقیق پاسخ دهید
-            {{ question}} فقط با {{ answer_type }} پاسخ دهید
+            {{ question}} فقط با {{ output_type }} پاسخ دهید
         """
     ),
     "french": textwrap.dedent(

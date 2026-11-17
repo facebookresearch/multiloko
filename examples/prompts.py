@@ -659,17 +659,15 @@ chat = {
         """\
             Beantwoord de volgende vraag zo kort en bondig mogelijk: {{ question }}
             Je antwoord moet alleen {{ output_type}} zijn.
-
-            Het antwoord is"""
+        """
     ),
     "english": textwrap.dedent(
         """\
             Please answer the following question.
             Question: {{ question }}
-            Your response should be as concise as possible and end with "The answer is [answer]", where [answer] is the response to the question.
+            Your response should be as concise as possible.
             The answer should only be {{ output_type }}.
-
-            The answer is"""
+        """
     ),
     "farsi": textwrap.dedent(
         """\
@@ -818,10 +816,9 @@ chat = {
         """\
             براہ کرم درج ذیل سوال کا جواب دیں۔
             سوال: {{ question }}
-            آپ کا جواب ہر ممکن حد تک مختصر ہونا چاہیے اور "جواب [جواب] ہے" پر ختم ہونا چاہیے، جہاں [جواب] سوال کا جواب ہے۔
+            آپ کا جواب ہر ممکن حد تک مختصر ہونا چاہیے۔
             جواب صرف ایک {{ output_type }} ہونا چاہیے۔
-
-            جواب ہے"""
+        """
     ),
     "vietnamese": textwrap.dedent(
         """\
